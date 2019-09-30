@@ -39,7 +39,7 @@ public class ObjectAdapter {
 		if (modifiedOrder.getOptimizationDuration() != 0)
 			currentOrder.setOptimizationDuration(modifiedOrder.getOptimizationDuration());
 
-		if (modifiedOrder.getMaxOptimizations() != 0)
+		if (modifiedOrder.getMaxOptimizations() >= 0)
 			currentOrder.setMaxOptimizations(modifiedOrder.getMaxOptimizations());
 
 		if (!CommonUtility.isNullObject(modifiedOrder.getOrderLocation()))
