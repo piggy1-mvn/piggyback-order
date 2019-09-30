@@ -30,6 +30,7 @@ script:
 - if [ $TRAVIS_BRANCH == "develop" ] && [ $TRAVIS_EVENT_TYPE == "push" ]; then cat secret-storage.json | docker login -u _json_key --password-stdin https://gcr.io; fi
 - if [ $TRAVIS_BRANCH == "develop" ] && [ $TRAVIS_EVENT_TYPE == "push" ]; then chmod 777 deploy_shell_canary.sh; fi
 - if [ $TRAVIS_BRANCH == "develop" ] && [ $TRAVIS_EVENT_TYPE == "push" ]; then ./deploy_shell_canary.sh; fi
+- if [ $TRAVIS_BRANCH == "master" ] && [ $TRAVIS_EVENT_TYPE == "push" ]; mvn clean verify sonar:sonar -Dsonar.projectKey=piggy1-mvn_piggyback-order; fi
 - if [ $TRAVIS_BRANCH == "master" ] && [ $TRAVIS_EVENT_TYPE == "push" ]; then chmod 777 deploy_shell_prod.sh; fi
 - if [ $TRAVIS_BRANCH == "master" ] && [ $TRAVIS_EVENT_TYPE == "push" ]; then ./deploy_shell_prod.sh; fi
 
