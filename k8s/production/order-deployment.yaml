@@ -12,7 +12,7 @@ spec:
         app: piggyback-order
         env: production
     spec:
-     volumes:
+      volumes:
       - name: google-cloud-key
         secret:
           secretName: pubsub-key
