@@ -1,14 +1,18 @@
 package com.incentives.piggyback.order.serviceimpl;
 
+import java.security.NoSuchAlgorithmException;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 import com.incentives.piggyback.order.entity.Partner;
 import com.incentives.piggyback.order.exception.InvalidRequestException;
 import com.incentives.piggyback.order.publisher.OrderEventPublisher;
 import com.incentives.piggyback.order.repository.OrderRepository;
 import com.incentives.piggyback.order.service.OrderService;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +32,9 @@ import com.incentives.piggyback.order.util.constants.Constant;
 import com.incentives.piggyback.order.util.constants.Preferences;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import javax.servlet.http.HttpServletRequest;
+
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -88,11 +95,39 @@ public class OrderServiceImpl implements OrderService {
 	}
 
 	@Override
-	public ResponseEntity getOrderType() {
-		HashMap<String, Object> map = new HashMap<>();
-		map.put("orderType", Preferences.values());
-		return  ResponseEntity.ok(map);
+	public ResponseEntity getOrderType(HttpServletRequest request) {
+		log.info("Order Service: getting order type");
+	    if(null!=request) {
+            String access_token = request.getHeader("Authorization");
+            if(isAuthorized(access_token)){
+				HashMap<String, Object> map = new HashMap<>();
+				map.put("orderType", Preferences.values());
+				return ResponseEntity.ok(map);
+			}
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+	    log.info("User not authorized to access order types");
+	    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 	}
+	private boolean isAuthorized(String accessToken){
+		log.info("Order Sevice: User token validation from user service");
+		String url = env.getProperty("users.api.userValid");
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("Accept", MediaType.APPLICATION_JSON_VALUE);
+		headers.set("Authorization", accessToken);
+		HttpEntity<?> entity = new HttpEntity<>(headers);
+		ResponseEntity<Integer> response =
+				restTemplate.exchange(url,HttpMethod.HEAD,
+						entity,Integer.class);
+		if (CommonUtility.isNullObject(response.getBody())){
+			throw new InvalidRequestException("No valid Token found");
+		}else if(response.getBody().toString().equals("202")){
+			return true;
+		}
+		else
+			return false;
+
+    }
 
 	@Override
 	public String deleteOrder(String orderId) {
