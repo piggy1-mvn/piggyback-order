@@ -119,9 +119,9 @@ public class OrderServiceImpl implements OrderService {
 		ResponseEntity<Integer> response =
 				restTemplate.exchange(url,HttpMethod.HEAD,
 						entity,Integer.class);
-		if (CommonUtility.isNullObject(response.getBody())){
+		if (CommonUtility.isNullObject(response.getStatusCode())){
 			throw new InvalidRequestException("No valid Token found");
-		}else if(response.getBody().toString().equals("202")){
+		}else if(response.getStatusCodeValue()==200){
 			return true;
 		}
 		else
