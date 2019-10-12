@@ -6,7 +6,7 @@ import java.util.Optional;
 
 import com.incentives.piggyback.order.entity.Partner;
 import com.incentives.piggyback.order.exception.InvalidRequestException;
-import com.incentives.piggyback.order.publisher.OrderEventPublisher;
+import com.incentives.piggyback.order.publisher.KafkaMessageProducer;
 import com.incentives.piggyback.order.repository.OrderRepository;
 import com.incentives.piggyback.order.service.OrderService;
 import org.slf4j.Logger;
@@ -36,15 +36,18 @@ public class OrderServiceImpl implements OrderService {
 	private OrderRepository orderRepository;
 
 	@Autowired
-	private OrderEventPublisher.PubsubOutboundGateway messagingGateway;
-
-	@Autowired
 	private Environment env;
 
 	@Autowired
 	private RestTemplate restTemplate;
 
+	private final KafkaMessageProducer kafkaMessageProducer;
+
 	Gson gson = new Gson();
+
+	public OrderServiceImpl(KafkaMessageProducer kafkaMessageProducer) {
+		this.kafkaMessageProducer = kafkaMessageProducer;
+	}
 
 	private static final Logger log = LoggerFactory.getLogger(OrderServiceImpl.class);
 
@@ -112,14 +115,15 @@ public class OrderServiceImpl implements OrderService {
 	}
 
 	private void publishOrder(OrderEntity order, String status) {
-		messagingGateway.sendToPubsub(
+		kafkaMessageProducer.send(
 				CommonUtility.stringifyEventForPublish(
 						gson.toJson(order),
 						status,
 						Calendar.getInstance().getTime().toString(),
 						"",
 						Constant.ORDER_SOURCE_ID
-				));
+				)
+		);
 	}
 
 }
