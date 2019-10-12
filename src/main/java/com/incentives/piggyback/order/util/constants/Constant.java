@@ -6,6 +6,9 @@ public interface Constant {
     String ORDER_CREATED_EVENT = "Order Events Created";
     String ORDER_UPDATED_EVENT = "Order Events Updated";
     String ORDER_DEACTIVATED_EVENT = "Order Events Deactivated";
+
+    String KAFKA_BOOTSTRAP_ADDRESS = "kafka.bootstrap.address";
+
 	Integer SUCCESS_STATUS = 200;
 	Integer FAILURE_STATUS = 101;
 }
