@@ -94,6 +94,12 @@ public class OrderServiceImpl implements OrderService {
 	}
 
 	@Override
+	public Iterable<OrderEntity> getOrderByPartnerId(String partnerId) {
+		log.info("Order Service: Started getting order from partnerId");
+		return orderRepository.findByPartnerId(partnerId);
+	}
+
+	@Override
 	public ResponseEntity getOrderType(HttpServletRequest request) {
 		log.info("Order Service: getting order type");
 	    if(null!=request) {
