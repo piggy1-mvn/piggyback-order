@@ -12,13 +12,15 @@ spec:
         app: piggyback-order
         env: production
     spec:
-      volumes:
-      - name: google-cloud-key
-        secret:
-          secretName: pubsub-key
       containers:
       - image: gcr.io/omega-palace-254907/piggy1-order:v4
         name: piggyback-prod-runner-order
+        env:
+          - name: JASYPT_ENCRYPTOR_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: jasypt-password
+                key: password
         resources:
           limits:
             memory: "384Mi"
