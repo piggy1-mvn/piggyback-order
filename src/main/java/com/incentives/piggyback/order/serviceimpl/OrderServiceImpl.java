@@ -1,18 +1,14 @@
 package com.incentives.piggyback.order.serviceimpl;
 
-import java.security.NoSuchAlgorithmException;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
 
 import com.incentives.piggyback.order.entity.Partner;
 import com.incentives.piggyback.order.exception.InvalidRequestException;
-import com.incentives.piggyback.order.publisher.OrderEventPublisher;
+import com.incentives.piggyback.order.publisher.KafkaMessageProducer;
 import com.incentives.piggyback.order.repository.OrderRepository;
 import com.incentives.piggyback.order.service.OrderService;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,15 +39,18 @@ public class OrderServiceImpl implements OrderService {
 	private OrderRepository orderRepository;
 
 	@Autowired
-	private OrderEventPublisher.PubsubOutboundGateway messagingGateway;
-
-	@Autowired
 	private Environment env;
 
 	@Autowired
 	private RestTemplate restTemplate;
 
+	private final KafkaMessageProducer kafkaMessageProducer;
+
 	Gson gson = new Gson();
+
+	public OrderServiceImpl(KafkaMessageProducer kafkaMessageProducer) {
+		this.kafkaMessageProducer = kafkaMessageProducer;
+	}
 
 	private static final Logger log = LoggerFactory.getLogger(OrderServiceImpl.class);
 
@@ -92,6 +91,12 @@ public class OrderServiceImpl implements OrderService {
 
 	public Iterable<OrderEntity> getAllOrder() {
 		return orderRepository.findAll();
+	}
+
+	@Override
+	public Iterable<OrderEntity> getOrderByPartnerId(String partnerId) {
+		log.info("Order Service: Started getting order from partnerId");
+		return orderRepository.findByPartnerId(partnerId);
 	}
 
 	@Override
@@ -147,14 +152,15 @@ public class OrderServiceImpl implements OrderService {
 	}
 
 	private void publishOrder(OrderEntity order, String status) {
-		messagingGateway.sendToPubsub(
+		kafkaMessageProducer.send(
 				CommonUtility.stringifyEventForPublish(
 						gson.toJson(order),
 						status,
 						Calendar.getInstance().getTime().toString(),
 						"",
 						Constant.ORDER_SOURCE_ID
-				));
+				)
+		);
 	}
 
 }
