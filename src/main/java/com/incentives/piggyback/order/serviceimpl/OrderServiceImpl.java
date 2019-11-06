@@ -6,7 +6,7 @@ import java.util.Optional;
 
 import com.incentives.piggyback.order.entity.Partner;
 import com.incentives.piggyback.order.exception.InvalidRequestException;
-import com.incentives.piggyback.order.publisher.OrderEventPublisher;
+import com.incentives.piggyback.order.publisher.KafkaMessageProducer;
 import com.incentives.piggyback.order.repository.OrderRepository;
 import com.incentives.piggyback.order.service.OrderService;
 import org.slf4j.Logger;
@@ -29,6 +29,9 @@ import com.incentives.piggyback.order.util.constants.Preferences;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import javax.servlet.http.HttpServletRequest;
+
+
 @Service
 public class OrderServiceImpl implements OrderService {
 
@@ -36,15 +39,18 @@ public class OrderServiceImpl implements OrderService {
 	private OrderRepository orderRepository;
 
 	@Autowired
-	private OrderEventPublisher.PubsubOutboundGateway messagingGateway;
-
-	@Autowired
 	private Environment env;
 
 	@Autowired
 	private RestTemplate restTemplate;
 
+	private final KafkaMessageProducer kafkaMessageProducer;
+
 	Gson gson = new Gson();
+
+	public OrderServiceImpl(KafkaMessageProducer kafkaMessageProducer) {
+		this.kafkaMessageProducer = kafkaMessageProducer;
+	}
 
 	private static final Logger log = LoggerFactory.getLogger(OrderServiceImpl.class);
 
@@ -88,11 +94,45 @@ public class OrderServiceImpl implements OrderService {
 	}
 
 	@Override
-	public ResponseEntity getOrderType() {
-		HashMap<String, Object> map = new HashMap<>();
-		map.put("orderType", Preferences.values());
-		return  ResponseEntity.ok(map);
+	public Iterable<OrderEntity> getOrderByPartnerId(String partnerId) {
+		log.info("Order Service: Started getting order from partnerId");
+		return orderRepository.findByPartnerId(partnerId);
 	}
+
+	@Override
+	public ResponseEntity getOrderType(HttpServletRequest request) {
+		log.info("Order Service: getting order type");
+	    if(null!=request) {
+            String access_token = request.getHeader("Authorization");
+            if(isAuthorized(access_token)){
+				HashMap<String, Object> map = new HashMap<>();
+				map.put("orderType", Preferences.values());
+				return ResponseEntity.ok(map);
+			}
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+	    log.info("User not authorized to access order types");
+	    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+	}
+	private boolean isAuthorized(String accessToken){
+		log.info("Order Sevice: User token validation from user service");
+		String url = env.getProperty("users.api.userValid");
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("Accept", MediaType.APPLICATION_JSON_VALUE);
+		headers.set("Authorization", accessToken);
+		HttpEntity<?> entity = new HttpEntity<>(headers);
+		ResponseEntity<Integer> response =
+				restTemplate.exchange(url,HttpMethod.HEAD,
+						entity,Integer.class);
+		if (CommonUtility.isNullObject(response.getStatusCode())){
+			throw new InvalidRequestException("No valid Token found");
+		}else if(response.getStatusCodeValue()==200){
+			return true;
+		}
+		else
+			return false;
+
+    }
 
 	@Override
 	public String deleteOrder(String orderId) {
@@ -112,14 +152,15 @@ public class OrderServiceImpl implements OrderService {
 	}
 
 	private void publishOrder(OrderEntity order, String status) {
-		messagingGateway.sendToPubsub(
+		kafkaMessageProducer.send(
 				CommonUtility.stringifyEventForPublish(
 						gson.toJson(order),
 						status,
 						Calendar.getInstance().getTime().toString(),
 						"",
 						Constant.ORDER_SOURCE_ID
-				));
+				)
+		);
 	}
 
 }

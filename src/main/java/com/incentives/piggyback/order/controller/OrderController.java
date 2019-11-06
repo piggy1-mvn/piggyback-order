@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.incentives.piggyback.order.dto.OrderEntity;
 import com.incentives.piggyback.order.entity.Order;
 
+import javax.servlet.http.HttpServletRequest;
+
 @RestController
 @RequestMapping("/order")
 public class OrderController {
@@ -48,13 +50,18 @@ public class OrderController {
 	}
 
 	@GetMapping("/categories")
-	public ResponseEntity<ResponseEntity<String>> getOrderType() {
-		return ResponseEntity.ok(orderService.getOrderType());
+	public ResponseEntity<ResponseEntity<String>> getOrderType(HttpServletRequest request) {
+		return ResponseEntity.ok(orderService.getOrderType(request));
 	}
 
 	@GetMapping("/")
 	public ResponseEntity<RestResponse<Iterable<OrderEntity>>> getAllOrder() {
 		return RestUtils.successResponse(orderService.getAllOrder());
+	}
+
+	@GetMapping("/partnerId")
+	public ResponseEntity<RestResponse<Iterable<OrderEntity>>> getOrderByPartnerId(@RequestParam("partnerId") String partnerId) {
+		return RestUtils.successResponse(orderService.getOrderByPartnerId(partnerId));
 	}
 
 }
